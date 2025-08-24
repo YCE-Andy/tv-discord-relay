@@ -1,26 +1,20 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const axios = require("axios");
-
-const app = express();
-app.use(bodyParser.json());
-
-const PORT = process.env.PORT || 3000;
-const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
-const SECRET = process.env.SECRET || "changeme";
-
-// TradingView will POST alerts here
 app.post("/tv", async (req, res) => {
   try {
-    if (req.headers["x-secret"] !== SECRET) {
+    // accept secret via header, body, or URL query
+    const headerSecret = req.headers["x-secret"];
+    const bodySecret   = req.body && req.body.secret;
+    const querySecret  = req.query && req.query.t;
+
+    const passed = (headerSecret === SECRET) || (bodySecret === SECRET) || (querySecret === SECRET);
+    if (!passed) {
       return res.status(403).send("Forbidden");
     }
 
-    const alert = req.body;
-    console.log("Received alert:", alert);
-
+    const alert = req.body || {};
     await axios.post(DISCORD_WEBHOOK_URL, {
-      content: `📈 TradingView Alert:\n${JSON.stringify(alert, null, 2)}`
+      content:
+        "📈 **TradingView Alert**\n" +
+        "```json\n" + JSON.stringify(alert, null, 2) + "\n```"
     });
 
     res.status(200).send("ok");
@@ -28,8 +22,4 @@ app.post("/tv", async (req, res) => {
     console.error(err);
     res.status(500).send("error");
   }
-});
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
 });
