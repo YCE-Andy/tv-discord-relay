@@ -1,25 +1,16 @@
-app.post("/tv", async (req, res) => {
+// quick health check
+app.get("/", (req, res) => res.status(200).send("OK"));
+
+// browser-friendly ping
+app.get("/ping", async (req, res) => {
   try {
-    // accept secret via header, body, or URL query
-    const headerSecret = req.headers["x-secret"];
-    const bodySecret   = req.body && req.body.secret;
-    const querySecret  = req.query && req.query.t;
-
-    const passed = (headerSecret === SECRET) || (bodySecret === SECRET) || (querySecret === SECRET);
-    if (!passed) {
-      return res.status(403).send("Forbidden");
-    }
-
-    const alert = req.body || {};
-    await axios.post(DISCORD_WEBHOOK_URL, {
-      content:
-        "📈 **TradingView Alert**\n" +
-        "```json\n" + JSON.stringify(alert, null, 2) + "\n```"
-    });
-
-    res.status(200).send("ok");
-  } catch (err) {
-    console.error(err);
+    const secret = req.query.secret || req.query.t;
+    if (secret !== SECRET) return res.status(403).send("Forbidden");
+    const msg = req.query.msg || "Ping";
+    await axios.post(DISCORD_WEBHOOK_URL, { content: `🔔 Ping: ${msg}` });
+    res.status(200).send("sent");
+  } catch (e) {
+    console.error(e);
     res.status(500).send("error");
   }
 });
